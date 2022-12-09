@@ -45,6 +45,23 @@ pub fn solve_part_1(custom_input: Option<String>) -> Result<String, String> {
     }
 }
 
-pub fn solve_part_2(_custom_input: Option<String>) -> Result<String, String> {
-    return Err("Not implemented".to_string());
+pub fn solve_part_2(custom_input: Option<String>) -> Result<String, String> {
+    let input = get_input(custom_input);
+    let mut elves: Vec<u64>;
+
+    match get_calorie_groups(input) {
+        Ok(result) => elves = result,
+        Err(error) => return Err(error),
+    }
+
+    let length = elves.len();
+
+    if length < 3 {
+        return Err(format!("Not enough elves, only saw '{}'", length))
+    }
+
+    elves.sort_by(|a, b| b.cmp(a));
+    let sum: u64 = elves.iter().take(3).sum();
+
+    return Ok(format!("{}", sum));
 }
