@@ -1,7 +1,7 @@
 use std::fs;
 mod days;
 
-fn run_day(day: u8, input_path: Option<String>) {
+fn run_day(day: u8, part: Part, input_path: Option<String>) {
     let input: Option<String>;
     match input_path {
         Some(path) => {
@@ -17,7 +17,10 @@ fn run_day(day: u8, input_path: Option<String>) {
         None => input = None,
     }
     let result = match day {
-        1 => days::day1::solve(input),
+        1 => match part {
+            Part::Part1 => days::day1::solve_part_1(input),
+            Part::Part2 => days::day1::solve_part_2(input),
+        },
         _ => Err(format!("Day not found: '{}'", day)),
     };
 
@@ -28,7 +31,7 @@ fn run_day(day: u8, input_path: Option<String>) {
 }
 
 enum InputValue {
-    Path(String),
+    String(String),
     None,
 }
 
@@ -36,8 +39,14 @@ enum CliArgument {
     Day(u8),
     InvalidDay(u8),
     Input(InputValue),
+    Part(InputValue),
     Help,
     Unrecognized,
+}
+
+enum Part {
+    Part1,
+    Part2,
 }
 
 fn is_valid_day(day: u8) -> bool {
@@ -48,18 +57,29 @@ fn parse_day(day: u8) -> CliArgument {
     return match day {
         day if is_valid_day(day) => CliArgument::Day(day),
         _ => CliArgument::InvalidDay(day),
-    }
+    };
 }
 
 fn parse_argument(arg: String) -> CliArgument {
     return match arg.as_str() {
         "-h" | "--help" => CliArgument::Help,
         "-i" | "--input" => CliArgument::Input(InputValue::None),
-        i if i.starts_with("-i=") => CliArgument::Input(InputValue::Path(i.trim_start_matches("-i=").to_string())),
-        i if i.starts_with("--input=") => CliArgument::Input(InputValue::Path(i.trim_start_matches("--input=").to_string())),
+        i if i.starts_with("-i=") => {
+            CliArgument::Input(InputValue::String(i.trim_start_matches("-i=").to_string()))
+        }
+        i if i.starts_with("--input=") => CliArgument::Input(InputValue::String(
+            i.trim_start_matches("--input=").to_string(),
+        )),
+        "-p" | "--part" => CliArgument::Part(InputValue::None),
+        p if p.starts_with("-p=") => {
+            CliArgument::Part(InputValue::String(p.trim_start_matches("-p=").to_string()))
+        }
+        p if p.starts_with("--part=") => {
+            CliArgument::Part(InputValue::String(p.trim_start_matches("--part=").to_string()))
+        }
         day if day.parse::<u8>().is_ok() => parse_day(day.parse::<u8>().unwrap()),
         _ => CliArgument::Unrecognized,
-    }
+    };
 }
 
 static USAGE: &str = "aoc <day> [options]";
@@ -69,11 +89,12 @@ Run the Advent of Code 2022 solution for the given day.
 If no input is given, the example input will be used.
 
 Arguments:
-  day:                     The day to run the solution for.       [int]
+  day:                 The day to run the solution for.                  [int]
 
 Options:
-  --help:                  Show help text.                    [boolean]
-  --input <path>           Specify which input to use.         [string]
+  --help:              Show help text.                               [boolean]
+  --input <path>       Specify which input to use.                    [string]
+  --part <1 or 2>      Specify which part of the puzzle to solve.        [int]
 ";
 
 fn print_error_and_exit(error_message: &str) {
@@ -85,6 +106,8 @@ fn main() {
     let mut help: bool = false;
     let mut day: Option<u8> = None;
     let mut next_arg_is_input = false;
+    let mut chosen_part: Option<Part> = None;
+    let mut next_arg_is_part = false;
     let mut input: Option<String> = None;
 
     for arg in std::env::args().skip(1) {
@@ -92,6 +115,14 @@ fn main() {
         if next_arg_is_input {
             next_arg_is_input = false;
             input = Some(arg);
+            continue;
+        } else if next_arg_is_part {
+            next_arg_is_part = false;
+            match arg.as_str() {
+                "1" => chosen_part = Some(Part::Part1),
+                "2" => chosen_part = Some(Part::Part2),
+                _ => print_error_and_exit(format!("Unrecognized part: '{}'", arg).as_str()),
+            }
             continue;
         }
         match parsed_arg {
@@ -107,24 +138,42 @@ fn main() {
                 }
                 day = Some(day_number);
             }
-            CliArgument::Input(input_value) => {
-                match input_value {
-                    InputValue::Path(path) => {
-                        if input.is_some() {
-                            print_error_and_exit("Input provided twice");
-                        }
-                        input = Some(path);
+            CliArgument::Input(input_value) => match input_value {
+                InputValue::String(path) => {
+                    if input.is_some() {
+                        print_error_and_exit("Input provided twice");
                     }
-                    InputValue::None => {
-                        if next_arg_is_input {
-                            print_error_and_exit("Input flag provided twice");
-                        } else if input.is_some() {
-                            print_error_and_exit("Input provided twice");
-                        }
-                        next_arg_is_input = true
+                    input = Some(path);
+                }
+                InputValue::None => {
+                    if next_arg_is_input {
+                        print_error_and_exit("Input flag provided twice");
+                    } else if input.is_some() {
+                        print_error_and_exit("Input provided twice");
+                    }
+                    next_arg_is_input = true
+                }
+            },
+            CliArgument::Part(input_value) => match input_value {
+                InputValue::String(part_num) => {
+                    if chosen_part.is_some() {
+                        print_error_and_exit("Part provided twice");
+                    }
+                    match part_num.as_str() {
+                        "1" => chosen_part = Some(Part::Part1),
+                        "2" => chosen_part = Some(Part::Part2),
+                        _ => print_error_and_exit(format!("Unrecognized part: '{}'", part_num).as_str()),
                     }
                 }
-            }
+                InputValue::None => {
+                    if next_arg_is_part {
+                        print_error_and_exit("Part flag provided twice");
+                    } else if chosen_part.is_some() {
+                        print_error_and_exit("Part provided twice");
+                    }
+                    next_arg_is_part = true
+                }
+            },
             CliArgument::InvalidDay(invalid_day) => {
                 print_error_and_exit(format!("Unrecognized day: '{}'", invalid_day).as_str());
             }
@@ -137,9 +186,12 @@ fn main() {
     if help {
         println!("{}\n{}", USAGE, HELP_MESSAGE);
     } else if day.is_some() {
-        run_day(day.unwrap(), input);
+        let part = match chosen_part {
+            Some(p) => p,
+            None => Part::Part1,
+        };
+        run_day(day.unwrap(), part, input);
     } else {
         print_error_and_exit("Must specify day to run");
     }
-
 }
