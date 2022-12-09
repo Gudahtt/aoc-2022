@@ -16,9 +16,14 @@ fn run_day(day: u8, input_path: Option<String>) {
         }
         None => input = None,
     }
-    match day {
+    let result = match day {
         1 => days::day1::solve(input),
-        _ => print_error_and_exit(format!("Day not found: '{}'", day).as_str()),
+        _ => Err(format!("Day not found: '{}'", day)),
+    };
+
+    match result {
+        Ok(answer) => println!("{}", answer),
+        Err(error) => print_error_and_exit(error.as_str()),
     }
 }
 
