@@ -33,6 +33,10 @@ fn run_day(day: u8, part: Part, input_path: Option<String>) {
             Part::Part1 => days::day4::solve_part_1(input),
             Part::Part2 => days::day4::solve_part_2(input),
         },
+        5 => match part {
+            Part::Part1 => days::day5::solve_part_1(input),
+            Part::Part2 => days::day5::solve_part_2(input),
+        },
         _ => Err(format!("Day not found: '{}'", day)),
     };
 
